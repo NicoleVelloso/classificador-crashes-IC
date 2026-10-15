@@ -1,59 +1,40 @@
-# ═══════════════════════════════════════════════════════════════════
-# SCRIPT 05 — DASHBOARD HTML DE CLASSIFICAÇÃO
-# ═══════════════════════════════════════════════════════════════════
-# Objetivo: Gerar um dashboard HTML visual mostrando os crashes
-#           novos classificados pelo prototipo, com filtros, cards
-#           e resumo executivo.
-#
-# Eh a demonstracao pratica do valor do prototipo:
-# recebe crashes -> classifica -> prioriza automaticamente.
-# ═══════════════════════════════════════════════════════════════════
-
 import json
 
-
-# 1. CARREGA OS DADOS
 with open("classificacoes_crashes_novos.json", "r", encoding="utf-8") as f:
     classificacoes = json.load(f)
 
 with open("resultados_avaliacao.json", "r", encoding="utf-8") as f:
     avaliacao = json.load(f)
 
-
-# 2. ORDENA POR SEVERIDADE E CONFIANÇA
 ordem_severidade = {"CRÍTICO": 0, "MÉDIO": 1, "BAIXO": 2}
 classificacoes.sort(
-    key=lambda x: (ordem_severidade[x["severidade_predita"]], -x["confianca"])
+    key=lambda x: (ordem_severidade[x["severidade_predita"]], -x["score_modelo"])
 )
 
-
-# 3. CONTAGEM POR CLASSE
 qtd_critico = sum(1 for c in classificacoes if c["severidade_predita"] == "CRÍTICO")
 qtd_medio = sum(1 for c in classificacoes if c["severidade_predita"] == "MÉDIO")
 qtd_baixo = sum(1 for c in classificacoes if c["severidade_predita"] == "BAIXO")
 total = len(classificacoes)
 
 
-# 4. MONTA OS CARDS DE CRASHES
 def cor_severidade(sev):
     return {
         "CRÍTICO": {"bg": "#FFEBEE", "border": "#C62828", "text": "#B71C1C", "emoji": "🔴"},
         "MÉDIO": {"bg": "#FFF3E0", "border": "#EF6C00", "text": "#E65100", "emoji": "🟡"},
-        "BAIXO": {"bg": "#E8F5E9", "border": "#2E7D32", "text": "#1B5E20", "emoji": "🟢"}
+        "BAIXO": {"bg": "#E8F5E9", "border": "#2E7D32", "text": "#1B5E20", "emoji": "🟢"},
     }[sev]
 
 
 cards_html = ""
 for i, c in enumerate(classificacoes, 1):
     cor = cor_severidade(c["severidade_predita"])
-    conf_pct = c["confianca"] * 100
+    score_pct = c["score_modelo"] * 100
 
-    # Barra de probabilidades
-    barras_probs = ""
+    barras_scores = ""
     for cls in ["CRÍTICO", "MÉDIO", "BAIXO"]:
-        p = c["probabilidades"].get(cls, 0) * 100
+        p = c["scores"].get(cls, 0) * 100
         cor_barra = cor_severidade(cls)["border"]
-        barras_probs += f"""
+        barras_scores += f"""
         <div class="prob-linha">
           <span class="prob-label">{cls}</span>
           <div class="prob-bar-bg">
@@ -71,8 +52,8 @@ for i, c in enumerate(classificacoes, 1):
         <div class="crash-badge" style="background: {cor['border']};">
           {cor['emoji']} {c['severidade_predita']}
         </div>
-        <div class="crash-confianca">
-          Confiança: <strong>{conf_pct:.1f}%</strong>
+        <div class="crash-score">
+          Score do modelo: <strong>{score_pct:.1f}%</strong>
         </div>
       </div>
       <div class="crash-body">
@@ -119,33 +100,56 @@ for i, c in enumerate(classificacoes, 1):
           </div>
         </div>
         <div class="probs-section">
-          <div class="probs-title">Distribuição das probabilidades:</div>
-          {barras_probs}
+          <div class="probs-title">Score do modelo por classe:</div>
+          {barras_scores}
         </div>
       </div>
     </div>
     """
 
 
-# 5. RESULTADOS DA AVALIAÇÃO
 medias = avaliacao["medias"]
 auc = medias["auc"]
 acuracia = medias["acuracia"]
 f1_critico = medias["f1_critico"]
 
+concordancia = avaliacao.get("concordancia_rotulos_referencia", acuracia)
 
-# 6. HTML COMPLETO
+criterios = avaliacao.get("criterios_tap", {})
+ic_conc = criterios.get("concordancia_ic95")
+if ic_conc and len(ic_conc) == 2:
+    texto_concordancia = (
+        f"IC 95%: {ic_conc[0] * 100:.1f}% – {ic_conc[1] * 100:.1f}%"
+    )
+else:
+    texto_concordancia = f"acurácia média na validação: {acuracia * 100:.1f}%"
+
+modelos = avaliacao.get("modelos", {})
+ensemble = modelos.get("Ensemble soft voting", {})
+faixa_auc = ensemble.get("auc", {})
+auc_min = faixa_auc.get("p2_5")
+auc_max = faixa_auc.get("p97_5")
+if auc_min is not None and auc_max is not None:
+    texto_faixa = f"faixa observada: {auc_min:.3f} – {auc_max:.3f}"
+else:
+    texto_faixa = f"desvio padrão: ± {medias.get('auc_std', 0):.3f}"
+
+protocolo = avaliacao.get("protocolo", {})
+n_avaliacoes = protocolo.get("n_avaliacoes", avaliacao.get("k", 5))
+
+
 html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Protótipo — Classificação Automática de Crashes | IC PICTA 2026</title>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    min-height: 100vh; padding: 30px 20px; color: #333;
+    min-height: 100vh; padding: 30px 16px; color: #333;
   }}
   .container {{ max-width: 1400px; margin: 0 auto; }}
 
@@ -154,15 +158,14 @@ html = f"""<!DOCTYPE html>
     box-shadow: 0 10px 40px rgba(0,0,0,0.2); margin-bottom: 25px;
   }}
   header h1 {{ color: #1F3864; font-size: 26px; margin-bottom: 8px; }}
-  .subtitulo {{ color: #555; font-size: 14px; margin-bottom: 4px; }}
-  .autora {{ color: #2a5298; font-size: 13px; font-weight: 600; margin-top: 8px; }}
+  .subtitulo {{ color: #555; font-size: 14px; }}
 
-  .badges-header {{ display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }}
-  .badge {{
-    background: #F0F4F8; padding: 6px 14px; border-radius: 20px;
-    font-size: 12px; color: #1F3864; font-weight: 600;
+  .aviso {{
+    background: #FFF8E1; border-left: 5px solid #F9A825;
+    border-radius: 10px; padding: 18px 24px; margin-bottom: 25px;
+    font-size: 13px; line-height: 1.6; color: #5D4037;
   }}
-  .badge.success {{ background: #E8F5E9; color: #1B5E20; }}
+  .aviso strong {{ color: #E65100; }}
 
   .stats-grid {{
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;
@@ -178,21 +181,20 @@ html = f"""<!DOCTYPE html>
   .stat-critico {{ color: #C62828; }}
   .stat-medio {{ color: #EF6C00; }}
   .stat-baixo {{ color: #2E7D32; }}
-  .stat-emoji {{ font-size: 24px; }}
 
   .model-info {{
     background: white; border-radius: 12px; padding: 25px 30px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px;
   }}
-  .model-info h3 {{ color: #1F3864; margin-bottom: 15px; font-size: 18px; }}
+  .model-info h3 {{ color: #1F3864; margin-bottom: 6px; font-size: 18px; }}
+  .model-info .nota {{ font-size: 12px; color: #777; margin-bottom: 18px; }}
   .metrics-row {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }}
   .metric-item {{ text-align: center; padding: 15px; background: #F8F9FC; border-radius: 8px; }}
   .metric-item .label {{ font-size: 12px; color: #666; margin-bottom: 5px; }}
   .metric-item .value {{ font-size: 24px; font-weight: 700; color: #1F3864; }}
+  .metric-item .faixa {{ font-size: 11px; color: #888; margin-top: 4px; }}
 
-  .filters {{
-    display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
-  }}
+  .filters {{ display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }}
   .filter-btn {{
     background: white; border: none; padding: 10px 20px; border-radius: 8px;
     cursor: pointer; font-size: 14px; font-weight: 600;
@@ -212,10 +214,11 @@ html = f"""<!DOCTYPE html>
   .crash-header {{
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid #eee;
+    gap: 12px; flex-wrap: wrap;
   }}
   .crash-numero {{ font-size: 20px; font-weight: 700; color: #1F3864; }}
   .crash-badge {{ color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }}
-  .crash-confianca {{ font-size: 13px; color: #555; }}
+  .crash-score {{ font-size: 13px; color: #555; }}
 
   .crash-body {{ font-size: 14px; }}
   .crash-info-row {{ display: flex; margin-bottom: 8px; }}
@@ -244,6 +247,7 @@ html = f"""<!DOCTYPE html>
   @media (max-width: 900px) {{
     .stats-grid, .metrics-row {{ grid-template-columns: 1fr 1fr; }}
     .crash-grid {{ grid-template-columns: 1fr 1fr 1fr; }}
+    header {{ padding: 24px 20px; }}
   }}
 </style>
 </head>
@@ -252,7 +256,18 @@ html = f"""<!DOCTYPE html>
 
   <header>
     <h1>Classificação Automática de Crashes</h1>
+    <p class="subtitulo">Protótipo desenvolvido na Iniciação Científica — PICTA 2026</p>
   </header>
+
+  <div class="aviso">
+    <strong>Como ler este painel.</strong>
+    Os crashes abaixo não possuem rótulo de referência: esta tela ilustra o
+    funcionamento do protótipo, e não mede sua acurácia. O valor apresentado como
+    <em>score do modelo</em> é a saída do soft voting — a calibração do modelo não foi
+    avaliada, portanto um score de 90% não significa 90% de chance de a classificação
+    estar correta. As métricas de desempenho do painel seguinte vêm da validação
+    cruzada sobre o conjunto rotulado, descrita no script 03.
+  </div>
 
   <div class="stats-grid">
     <div class="stat-card">
@@ -275,17 +290,24 @@ html = f"""<!DOCTYPE html>
 
   <div class="model-info">
     <h3>Desempenho do Modelo</h3>
+    <p class="nota">
+      Validação cruzada estratificada, {n_avaliacoes} avaliações, sem vazamento entre
+      treino e validação. Concordância medida contra os rótulos de referência
+      elaborados pela autora segundo os critérios do questionário.
+    </p>
     <div class="metrics-row">
       <div class="metric-item">
-        <div class="label">AUC Médio</div>
+        <div class="label">AUC médio</div>
         <div class="value">{auc:.3f}</div>
+        <div class="faixa">{texto_faixa}</div>
       </div>
       <div class="metric-item">
-        <div class="label">Taxa de Concordância</div>
-        <div class="value">{acuracia*100:.1f}%</div>
+        <div class="label">Concordância com os rótulos de referência</div>
+        <div class="value">{concordancia * 100:.1f}%</div>
+        <div class="faixa">{texto_concordancia}</div>
       </div>
       <div class="metric-item">
-        <div class="label">F1-Score Classe Crítico</div>
+        <div class="label">F1-score da classe crítica</div>
         <div class="value">{f1_critico:.3f}</div>
       </div>
     </div>
@@ -301,6 +323,8 @@ html = f"""<!DOCTYPE html>
   <div id="crashes-container">
     {cards_html}
   </div>
+
+  <footer>Gerado pelo script 05 do protótipo — IC PICTA 2026</footer>
 
 </div>
 
@@ -322,17 +346,9 @@ html = f"""<!DOCTYPE html>
 </html>
 """
 
-
-# 7. SALVA O ARQUIVO HTML
 with open("dashboard.html", "w", encoding="utf-8") as f:
     f.write(html)
 
-print("=" * 65)
-print("DASHBOARD GERADO COM SUCESSO")
-print("=" * 65)
-print("\nArquivo: dashboard.html")
-print("\nPara abrir no navegador:")
-print("   Mac:     open dashboard.html")
-print("   Linux:   xdg-open dashboard.html")
-print("   Windows: start dashboard.html")
-print("=" * 65)
+print("=" * 70)
+print("dashboard.html gerado.  open / xdg-open / start dashboard.html")
+print("=" * 70)
