@@ -1,4 +1,3 @@
-
 ## Como rodar — passo a passo
 
 ### 1. Preparar o ambiente (só na primeira vez)
@@ -31,6 +30,18 @@ No Linux é `xdg-open dashboard.html`; no Windows, `start dashboard.html`.
 
 ---
 
+## Atalho: rodar tudo de uma vez
+
+```bash
+source venv/bin/activate
+bash rodar_tudo.sh
+```
+
+Funciona no macOS e no Linux. No Windows, use o Git Bash (que acompanha o
+Git for Windows) ou o WSL — no `cmd` e no PowerShell o comando `bash` não
+existe.
+---
+
 ## Se o Terminal foi fechado
 
 O ambiente virtual precisa ser reativado a cada sessão nova:
@@ -56,7 +67,7 @@ Sem isso o `python3` não encontra as bibliotecas.
 | `06_diagnostico_features.py` | Mostra de onde vem o desempenho do modelo | — |
 
 O script `00` não precisa ser executado: a planilha já vem gerada no pacote.
-Rodar de novo produz um arquivo idêntico.
+Rodar de novo produz um arquivo idêntico, porque a semente aleatória é fixa.
 
 O script `06` é opcional. Ele roda o modelo variando quais grupos de features
 entram, e serve para verificar que nenhuma coluna isolada está funcionando como
