@@ -143,7 +143,7 @@ html = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Protótipo — Classificação Automática de Crashes | IC PICTA 2026</title>
+<title>Protótipo — Classificação Automática de Crashes</title>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{
@@ -256,18 +256,8 @@ html = f"""<!DOCTYPE html>
 
   <header>
     <h1>Classificação Automática de Crashes</h1>
-    <p class="subtitulo">Protótipo desenvolvido na Iniciação Científica — PICTA 2026</p>
   </header>
 
-  <div class="aviso">
-    <strong>Como ler este painel.</strong>
-    Os crashes abaixo não possuem rótulo de referência: esta tela ilustra o
-    funcionamento do protótipo, e não mede sua acurácia. O valor apresentado como
-    <em>score do modelo</em> é a saída do soft voting — a calibração do modelo não foi
-    avaliada, portanto um score de 90% não significa 90% de chance de a classificação
-    estar correta. As métricas de desempenho do painel seguinte vêm da validação
-    cruzada sobre o conjunto rotulado, descrita no script 03.
-  </div>
 
   <div class="stats-grid">
     <div class="stat-card">
@@ -290,11 +280,6 @@ html = f"""<!DOCTYPE html>
 
   <div class="model-info">
     <h3>Desempenho do Modelo</h3>
-    <p class="nota">
-      Validação cruzada estratificada, {n_avaliacoes} avaliações, sem vazamento entre
-      treino e validação. Concordância medida contra os rótulos de referência
-      elaborados pela autora segundo os critérios do questionário.
-    </p>
     <div class="metrics-row">
       <div class="metric-item">
         <div class="label">AUC médio</div>
@@ -323,8 +308,6 @@ html = f"""<!DOCTYPE html>
   <div id="crashes-container">
     {cards_html}
   </div>
-
-  <footer>Gerado pelo script 05 do protótipo — IC PICTA 2026</footer>
 
 </div>
 
