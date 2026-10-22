@@ -117,9 +117,32 @@ f1_critico = make_scorer(
     f1_score, labels=["CRÍTICO"], average="macro", zero_division=0
 )
 
+
+def auc_critico(estimador, X_teste, y_teste):
+    """AUC da classe CRITICO contra as demais (um-contra-o-resto).
+
+    E este o criterio que o Termo de Abertura do Projeto estabelece:
+    "AUC superior a 0,80 na classe critica". A metrica "auc" abaixo e
+    a media macro um-contra-o-resto das tres classes, reportada como
+    metrica complementar. As duas nao sao a mesma coisa e por isso
+    aparecem separadas.
+
+    Recebe o estimador (e nao apenas as predicoes) para ler a ordem
+    das classes diretamente de quem gerou as probabilidades, sem
+    supor que ela coincide com ORDEM_CLASSES.
+    """
+    from sklearn.metrics import roc_auc_score
+
+    proba = estimador.predict_proba(X_teste)
+    classes = list(estimador.named_steps["clf"].classes_)
+    j = classes.index("CRÍTICO")
+    return float(roc_auc_score((y_teste == "CRÍTICO").astype(int), proba[:, j]))
+
+
 METRICAS = {
     "acuracia": "accuracy",
     "auc": "roc_auc_ovr",
+    "auc_critico": auc_critico,
     "f1_critico": f1_critico,
 }
 
@@ -187,8 +210,10 @@ tabela = {}
 for nome, metricas in resultados_modelos.items():
     acc = resumir(metricas["acuracia"])
     auc = resumir(metricas["auc"])
+    aucc = resumir(metricas["auc_critico"])
     f1c = resumir(metricas["f1_critico"])
-    tabela[nome] = {"acuracia": acc, "auc": auc, "f1_critico": f1c}
+    tabela[nome] = {"acuracia": acc, "auc": auc, "auc_critico": aucc,
+                    "f1_critico": f1c}
     print(
         f"{nome:<32} "
         f"{acc['media'] * 100:>6.1f}% +/- {acc['desvio'] * 100:<4.1f} "
@@ -275,6 +300,8 @@ print(
     f"{acertos}/{len(y)} = {concordancia * 100:.1f}%"
 )
 
+META_CONCORDANCIA = 0.75
+
 try:
     from scipy import stats
 
@@ -284,7 +311,6 @@ try:
         f"   IC 95% (Wilson): [{ic_baixo * 100:.1f}% - {ic_alto * 100:.1f}%]"
     )
 
-    META_CONCORDANCIA = 0.75
     comparacao = stats.binomtest(acertos, len(y), p=META_CONCORDANCIA,
                                  alternative="less")
     print(
@@ -308,28 +334,36 @@ print("Medida contra rotulos de referencia da autora, nao contra triagem indepen
 ensemble = tabela["Ensemble soft voting"]
 auc_medio = ensemble["auc"]["media"]
 auc_inferior = ensemble["auc"]["p2_5"]
+auc_crit_medio = ensemble["auc_critico"]["media"]
+auc_crit_inferior = ensemble["auc_critico"]["p2_5"]
 
 print("\n" + "=" * 70)
-print("CRITERIOS DE SUCESSO DO TAP")
+print("CRITERIO DE SUCESSO DO TAP")
 print("=" * 70)
 
-marca = "OK " if auc_medio >= 0.80 else "XX "
-print(f"   {marca} AUC >= 0,80 ....... obtido: {auc_medio:.3f}")
-print(f"        faixa observada: [{auc_inferior:.3f} - "
-      f"{ensemble['auc']['p97_5']:.3f}]")
+marca = "OK " if auc_crit_medio > 0.80 else "XX "
+print(f"   {marca} AUC > 0,80 na classe CRITICA ... obtido: "
+      f"{auc_crit_medio:.3f}")
+print(f"        faixa observada: [{auc_crit_inferior:.3f} - "
+      f"{ensemble['auc_critico']['p97_5']:.3f}]")
+if auc_crit_inferior < 0.80 < auc_crit_medio:
+    print(f"        nota: limite inferior da faixa abaixo de 0,80 (n={len(y)}).")
 
-marca = "OK " if concordancia >= 0.75 else "XX "
-print(f"   {marca} Concordancia >= 75% ... obtida: {concordancia * 100:.1f}%")
+print("\n" + "-" * 70)
+print("METRICAS COMPLEMENTARES (nao sao criterios do TAP)")
+print("-" * 70)
+print(f"   AUC macro um-contra-o-resto .... {auc_medio:.3f}  "
+      f"[{auc_inferior:.3f} - {ensemble['auc']['p97_5']:.3f}]")
+print(f"   Concordancia com os rotulos .... {concordancia * 100:.1f}%")
 if ic_concordancia is not None:
     print(
         f"        IC 95%: [{ic_concordancia[0] * 100:.1f}% - "
         f"{ic_concordancia[1] * 100:.1f}%]"
     )
-    if ic_concordancia[0] <= 0.75 <= ic_concordancia[1] and concordancia < 0.75:
-        print("        meta contida no IC 95%")
+    print(f"        comparada a meta de referencia de "
+          f"{META_CONCORDANCIA * 100:.0f}% adotada na analise")
 
-if auc_inferior < 0.80 <= auc_medio:
-    print(f"\n   Nota: limite inferior da faixa de AUC abaixo de 0,80 (n={len(y)}).")
+
 
 
 saida = {
@@ -360,6 +394,11 @@ saida = {
     "ordem_classes": ORDEM_CLASSES,
     "concordancia_rotulos_referencia": concordancia,
     "criterios_tap": {
+        "auc_critico_meta": 0.80,
+        "auc_critico_obtido": auc_crit_medio,
+        "auc_critico_faixa": [auc_crit_inferior,
+                              ensemble["auc_critico"]["p97_5"]],
+        "auc_critico_atingido": bool(auc_crit_medio > 0.80),
         "auc_meta": 0.80,
         "auc_obtido": auc_medio,
         "auc_atingido": bool(auc_medio >= 0.80),
