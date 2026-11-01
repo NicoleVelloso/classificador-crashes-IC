@@ -14,8 +14,11 @@ from imblearn.over_sampling import SMOTE
 
 import warnings
 
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings(
+    "ignore",
+    message=r"The `probability` parameter was deprecated",
+    category=FutureWarning,
+)
 
 
 ARQUIVO = "Crashes_Firebase_Schema_Real_IC_Nicole_PICTA2026_v2.xlsx"
@@ -137,4 +140,6 @@ print("   modelo.joblib  (pipeline completo: pre-processamento + modelo)")
 
 print("\n" + "=" * 70)
 print("TREINAMENTO CONCLUIDO")
+print("=" * 70)
+print("   Proximo passo: python3 03_avaliar_modelo.py")
 print("=" * 70)

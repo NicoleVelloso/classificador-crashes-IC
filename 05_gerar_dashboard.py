@@ -1,4 +1,28 @@
 import json
+from html import escape
+
+
+def esc(valor):
+    """Escapa qualquer valor vindo da planilha ou do JSON antes de inseri-lo
+    no HTML do dashboard.
+
+    Sem isso, uma mensagem de excecao que contenha marcacao e inserida crua
+    na pagina. Com dado sintetico o risco e baixo, mas a evolucao prevista
+    para crashes reais do Crashlytics traz texto de terceiros para dentro
+    desses campos. quote=True porque alguns valores entram em atributos.
+    """
+    return escape(str(valor), quote=True)
+
+
+def num(valor):
+    """Formata contagem com separador de milhar. Se o campo nao vier
+    numerico da planilha, escapa como texto em vez de interromper a
+    execucao."""
+    try:
+        return f"{int(valor):,}"
+    except (TypeError, ValueError):
+        return esc(valor)
+
 
 with open("classificacoes_crashes_novos.json", "r", encoding="utf-8") as f:
     classificacoes = json.load(f)
@@ -45,12 +69,12 @@ for i, c in enumerate(classificacoes, 1):
         """
 
     cards_html += f"""
-    <div class="crash-card" data-severidade="{c['severidade_predita']}"
+    <div class="crash-card" data-severidade="{esc(c['severidade_predita'])}"
          style="background: {cor['bg']}; border-left: 5px solid {cor['border']};">
       <div class="crash-header">
         <div class="crash-numero">#{i:02d}</div>
         <div class="crash-badge" style="background: {cor['border']};">
-          {cor['emoji']} {c['severidade_predita']}
+          {cor['emoji']} {esc(c['severidade_predita'])}
         </div>
         <div class="crash-score">
           Score do modelo: <strong>{score_pct:.1f}%</strong>
@@ -59,44 +83,44 @@ for i, c in enumerate(classificacoes, 1):
       <div class="crash-body">
         <div class="crash-info-row">
           <span class="crash-label">Exceção:</span>
-          <span class="crash-value crash-code">{c['exceptions_type']}</span>
+          <span class="crash-value crash-code">{esc(c['exceptions_type'])}</span>
         </div>
         <div class="crash-info-row">
           <span class="crash-label">Mensagem:</span>
-          <span class="crash-value">{c['exceptions_exception_message']}</span>
+          <span class="crash-value">{esc(c['exceptions_exception_message'])}</span>
         </div>
         <div class="crash-info-row">
           <span class="crash-label">Local:</span>
-          <span class="crash-value crash-code">{c['blame_frame_file']}:{c['blame_frame_line']}</span>
+          <span class="crash-value crash-code">{esc(c['blame_frame_file'])}:{esc(c['blame_frame_line'])}</span>
         </div>
         <div class="crash-info-row">
           <span class="crash-label">Método:</span>
-          <span class="crash-value crash-code">{c['blame_frame_symbol']}</span>
+          <span class="crash-value crash-code">{esc(c['blame_frame_symbol'])}</span>
         </div>
         <div class="crash-grid">
           <div class="crash-metric">
             <div class="crash-metric-label">Plataforma</div>
-            <div class="crash-metric-value">{c['platform']}</div>
+            <div class="crash-metric-value">{esc(c['platform'])}</div>
           </div>
           <div class="crash-metric">
             <div class="crash-metric-label">Dispositivo</div>
-            <div class="crash-metric-value">{c['device_model']}</div>
+            <div class="crash-metric-value">{esc(c['device_model'])}</div>
           </div>
           <div class="crash-metric">
             <div class="crash-metric-label">Tipo</div>
-            <div class="crash-metric-value">{c['error_type']}</div>
+            <div class="crash-metric-value">{esc(c['error_type'])}</div>
           </div>
           <div class="crash-metric">
             <div class="crash-metric-label">Ocorrências</div>
-            <div class="crash-metric-value">{c['occurrences_count']:,}</div>
+            <div class="crash-metric-value">{num(c['occurrences_count'])}</div>
           </div>
           <div class="crash-metric">
             <div class="crash-metric-label">Usuários</div>
-            <div class="crash-metric-value">{c['users_affected']:,}</div>
+            <div class="crash-metric-value">{num(c['users_affected'])}</div>
           </div>
           <div class="crash-metric">
             <div class="crash-metric-label">Event ID</div>
-            <div class="crash-metric-value crash-code">{c['event_id']}</div>
+            <div class="crash-metric-value crash-code">{esc(c['event_id'])}</div>
           </div>
         </div>
         <div class="probs-section">

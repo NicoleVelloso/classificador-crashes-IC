@@ -1,4 +1,5 @@
-
+import re
+import sys
 
 import pandas as pd
 
@@ -61,6 +62,69 @@ if problemas:
         print(f"   ATENCAO {coluna}: {n} valores ausentes")
 else:
     print("   OK Nenhum valor ausente. Dataset integro.")
+
+
+COLUNAS_ESTRUTURAIS = {
+    "event_id", "installation_uuid", "crash_id", "issue_id", "session_id",
+}
+
+PADROES_IDENTIFICADOR = {
+    "e-mail": re.compile(r"[\w.+-]+@[\w-]+\.[\w.]{2,}"),
+    "UUID": re.compile(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+        r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    ),
+    "ID em hexadecimal longo": re.compile(r"\b[0-9a-fA-F]{32,}\b"),
+}
+
+
+def conferir_identificadores(df, nome_aba):
+    """Procura padroes de identificador pessoal nas colunas de texto.
+
+    Devolve uma lista de achados; lista vazia significa que nenhuma
+    coluna de texto contem padrao de identificador.
+    """
+    achados = []
+    colunas_texto = [
+        c for c in df.columns
+        if not pd.api.types.is_numeric_dtype(df[c])
+        and c not in COLUNAS_ESTRUTURAIS
+    ]
+    for coluna in colunas_texto:
+        valores = df[coluna].astype(str)
+        for nome_padrao, padrao in PADROES_IDENTIFICADOR.items():
+            atingidas = valores.str.contains(padrao, regex=True, na=False)
+            n = int(atingidas.sum())
+            if n:
+                exemplo = str(valores[atingidas].iloc[0])[:60]
+                achados.append((nome_aba, coluna, nome_padrao, n, exemplo))
+    return achados
+
+
+print("\n" + "-" * 65)
+print("PADROES DE IDENTIFICADOR NAS COLUNAS DE TEXTO:")
+print("-" * 65)
+
+achados_id = (
+    conferir_identificadores(df_treino, ABA_TREINO)
+    + conferir_identificadores(df_teste, ABA_TESTE)
+)
+
+if achados_id:
+    print("   EXECUCAO INTERROMPIDA")
+    print("   Foram encontrados padroes de identificador pessoal nas")
+    print("   colunas de texto. Esta PoC so aceita dados sinteticos.")
+    print()
+    for aba, coluna, padrao, n, exemplo in achados_id:
+        print(f"     [{aba}] {coluna}: {n} ocorrencia(s) de {padrao}")
+        print(f"        exemplo: {exemplo}")
+    print()
+    print("   Remova ou anonimize esses valores antes de prosseguir.")
+    sys.exit(1)
+
+print("   OK Nenhum padrao de identificador nas colunas de texto.")
+print(f"      Colunas estruturais de ID nao verificadas: "
+      f"{', '.join(sorted(COLUNAS_ESTRUTURAIS & set(df_treino.columns))) or 'nenhuma'}")
 
 
 

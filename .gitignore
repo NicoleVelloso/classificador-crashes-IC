@@ -1,1 +1,11 @@
+# Ambiente virtual
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+modelo.joblib
+dashboard.html
+resultados_avaliacao.json
+classificacoes_crashes_novos.json
 /.DS_Store
+.DS_Store

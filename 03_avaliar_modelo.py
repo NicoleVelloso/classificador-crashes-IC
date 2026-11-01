@@ -22,8 +22,11 @@ from sklearn.svm import SVC
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.over_sampling import SMOTE
 
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings(
+    "ignore",
+    message=r"The `probability` parameter was deprecated",
+    category=FutureWarning,
+)
 
 ARQUIVO = "Crashes_Firebase_Schema_Real_IC_Nicole_PICTA2026_v2.xlsx"
 ORDEM_CLASSES = ["CRÍTICO", "MÉDIO", "BAIXO"]
@@ -341,13 +344,27 @@ print("\n" + "=" * 70)
 print("CRITERIO DE SUCESSO DO TAP")
 print("=" * 70)
 
-marca = "OK " if auc_crit_medio > 0.80 else "XX "
+if auc_crit_inferior >= 0.80:
+    situacao_auc_critico = "atingido com folga"
+    marca = "OK "
+elif auc_crit_medio > 0.80:
+    situacao_auc_critico = "atingido na media"
+    marca = "~~ "
+else:
+    situacao_auc_critico = "nao atingido"
+    marca = "XX "
+
 print(f"   {marca} AUC > 0,80 na classe CRITICA ... obtido: "
       f"{auc_crit_medio:.3f}")
 print(f"        faixa observada: [{auc_crit_inferior:.3f} - "
       f"{ensemble['auc_critico']['p97_5']:.3f}]")
-if auc_crit_inferior < 0.80 < auc_crit_medio:
-    print(f"        nota: limite inferior da faixa abaixo de 0,80 (n={len(y)}).")
+print(f"        situacao: {situacao_auc_critico.upper()}")
+if situacao_auc_critico == "atingido na media":
+    print(f"        a media supera 0,80, mas o limite inferior da faixa")
+    print(f"        ({auc_crit_inferior:.3f}) fica abaixo: em parte das")
+    print(f"        divisoes o criterio nao seria atingido (n={len(y)}).")
+elif situacao_auc_critico == "atingido com folga":
+    print(f"        toda a faixa observada fica acima de 0,80.")
 
 print("\n" + "-" * 70)
 print("METRICAS COMPLEMENTARES (nao sao criterios do TAP)")
@@ -389,7 +406,6 @@ saida = {
         "f1_critico": ensemble["f1_critico"]["media"],
         "f1_critico_std": ensemble["f1_critico"]["desvio"],
     },
-    "matriz_confusao_ensemble": matriz_acumulada.tolist(),
     "matriz_confusao": matriz_acumulada.tolist(),
     "ordem_classes": ORDEM_CLASSES,
     "concordancia_rotulos_referencia": concordancia,
@@ -398,16 +414,15 @@ saida = {
         "auc_critico_obtido": auc_crit_medio,
         "auc_critico_faixa": [auc_crit_inferior,
                               ensemble["auc_critico"]["p97_5"]],
-        "auc_critico_atingido": bool(auc_crit_medio > 0.80),
+        "auc_critico_situacao": situacao_auc_critico,
         "auc_meta": 0.80,
         "auc_obtido": auc_medio,
         "auc_atingido": bool(auc_medio >= 0.80),
-        "concordancia_meta": 0.75,
+        "concordancia_meta": META_CONCORDANCIA,
         "concordancia_obtida": concordancia,
         "concordancia_ic95": ic_concordancia,
         "concordancia_p_valor_contra_meta": p_valor_concordancia,
-        "concordancia_atingida": bool(concordancia >= 0.75),
-        "concordancia_atingido": bool(concordancia >= 0.75),
+        "concordancia_atingida": bool(concordancia >= META_CONCORDANCIA),
     },
 }
 

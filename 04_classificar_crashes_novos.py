@@ -5,8 +5,11 @@ import warnings
 import joblib
 import pandas as pd
 
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings(
+    "ignore",
+    message=r"The `probability` parameter was deprecated",
+    category=FutureWarning,
+)
 
 
 
