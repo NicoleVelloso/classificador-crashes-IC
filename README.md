@@ -91,6 +91,11 @@ como atalho para o rótulo. O atalho que importa não está em coluna isolada, e
 sim na combinação de `blame_frame_file` com o final da mensagem: as Partes 3 e
 4 do script medem esse caso.
 
+**Sobre o `modelo.joblib`.** Não carregue um `modelo.joblib` recebido de
+terceiros: o formato do joblib reconstrói objetos Python ao ser lido e pode
+executar código arbitrário nesse processo. Gere o seu com o script
+`02_treinar_modelo.py`, que é o único caminho previsto aqui.
+
 ---
 
 ## Dataset
@@ -136,6 +141,15 @@ em Android e iOS, que ordens de grandeza as contagens assumem. Como
 consequência, não houve tratamento de dados pessoais e não houve anonimização,
 porque não existiam identificadores reais a anonimizar. Os nomes de pacote e
 de arquivo são fictícios e seguem o padrão `com.example`.
+
+Esta PoC aceita apenas dados sintéticos. O script `01_carregar_dados.py`
+verifica as colunas de texto da planilha e interrompe a execução se encontrar
+padrões de identificador — endereço de e-mail, UUID ou identificador em
+hexadecimal longo. As colunas estruturais de identificação do próprio schema
+(`event_id`, `issue_id` e as demais) ficam fora dessa verificação, e o script
+informa na saída quais foram ignoradas. Qualquer integração futura com a API
+do Firebase Crashlytics precisa passar por essa verificação antes de
+alimentar o modelo.
 
 As colunas de impacto (`occurrences_count` e `users_affected`) são sorteadas
 independentemente da severidade, para que não funcionem como substituto do
