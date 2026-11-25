@@ -12,6 +12,14 @@ Este repositório acompanha o artigo da pesquisa e existe para que os
 resultados possam ser reproduzidos. Toda a avaliação roda com semente
 aleatória fixa.
 
+## Ambiente de referência
+
+Os números relatados no artigo foram produzidos com **Python 3.14.0** e com as
+versões exatas fixadas em `requirements.txt`. Versões diferentes do Python ou
+das bibliotecas podem deslocar os resultados na terceira casa decimal, porque
+mudam a ordem das operações de ponto flutuante.
+
+
 ## Como rodar — passo a passo
 
 ### 1. Preparar o ambiente (só na primeira vez)

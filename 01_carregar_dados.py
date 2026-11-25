@@ -64,9 +64,14 @@ else:
     print("   OK Nenhum valor ausente. Dataset integro.")
 
 
-COLUNAS_ESTRUTURAIS = {
-    "event_id", "installation_uuid", "crash_id", "issue_id", "session_id",
-}
+# Identificam o evento, e nao a pessoa: ficam fora da busca por padroes.
+COLUNAS_ESTRUTURAIS = {"event_id", "issue_id", "crash_id"}
+
+# Identificam a instalacao do aplicativo num aparelho ou a sessao de uso.
+# Num export real do Crashlytics permitem identificacao indireta, de modo
+# que podem ser dado pessoal no sentido da LGPD; precisam ser removidas ou
+# pseudonimizadas antes deste script, e nunca chegar ao modelo.
+COLUNAS_VEDADAS = {"installation_uuid", "session_id"}
 
 PADROES_IDENTIFICADOR = {
     "e-mail": re.compile(r"[\w.+-]+@[\w-]+\.[\w.]{2,}"),
@@ -100,6 +105,51 @@ def conferir_identificadores(df, nome_aba):
                 achados.append((nome_aba, coluna, nome_padrao, n, exemplo))
     return achados
 
+
+def conferir_colunas_vedadas(df, nome_aba):
+    """Recusa as colunas que identificam a instalacao ou a sessao.
+
+    Devolve uma lista de achados; lista vazia significa que nenhuma
+    dessas colunas esta presente com valor em formato de UUID.
+    """
+    achados = []
+    for coluna in sorted(COLUNAS_VEDADAS & set(df.columns)):
+        valores = df[coluna].astype(str)
+        atingidas = valores.str.contains(
+            PADROES_IDENTIFICADOR["UUID"], regex=True, na=False
+        )
+        n = int(atingidas.sum())
+        if n:
+            achados.append((nome_aba, coluna, n))
+    return achados
+
+
+print("\n" + "-" * 65)
+print("COLUNAS DE IDENTIFICACAO DE INSTALACAO OU SESSAO:")
+print("-" * 65)
+
+vedadas = (
+    conferir_colunas_vedadas(df_treino, ABA_TREINO)
+    + conferir_colunas_vedadas(df_teste, ABA_TESTE)
+)
+
+if vedadas:
+    print("   EXECUCAO INTERROMPIDA")
+    print("   Foram encontradas colunas que identificam a instalacao ou a")
+    print("   sessao, com valores em formato de UUID. Essas colunas podem")
+    print("   ser dado pessoal e nao devem alimentar o modelo.")
+    print()
+    for aba, coluna, n in vedadas:
+        print(f"     [{aba}] {coluna}: {n} valor(es) em formato de UUID")
+    print()
+    print("   Remova ou pseudonimize essas colunas antes de prosseguir.")
+    sys.exit(1)
+
+presentes = sorted(COLUNAS_VEDADAS & set(df_treino.columns))
+if presentes:
+    print(f"   OK presentes sem valor de UUID: {', '.join(presentes)}")
+else:
+    print("   OK Nenhuma coluna de instalacao ou sessao no conjunto.")
 
 print("\n" + "-" * 65)
 print("PADROES DE IDENTIFICADOR NAS COLUNAS DE TEXTO:")

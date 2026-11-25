@@ -381,23 +381,58 @@ else:
     print("   da Parte 3 precisa ser revista.")
 
 
+auc_impacto = resultados["So users_affected + ocorrencias"]["auc"]
+impacto_ok = auc_impacto < 0.60
+trivial_supera = acc_trivial > acc_modelo
+falsificador_ok = auc_tudo_embaralhado < 0.60
+
 print("\n" + "-" * 70)
 print("COMO LER")
 print("-" * 70)
-print("Parte 2 - impacto isolado em AUC ~0,500: as colunas de impacto")
-print("nao funcionam como atalho. Era o vazamento da primeira versao do")
-print("dataset, e esta corrigido.")
+
+print(f"Parte 2 - impacto isolado em AUC {auc_impacto:.3f}:")
+if impacto_ok:
+    print("   as colunas de impacto nao funcionam como atalho. Era o")
+    print("   vazamento da primeira versao do dataset, e esta corrigido.")
+else:
+    print("   as colunas de impacto AINDA funcionam como atalho. O defeito")
+    print("   corrigido na regeneracao do dataset reapareceu; o resultado")
+    print("   do modelo nao pode ser lido antes de investigar isso.")
 print()
-print("Parte 3 - a regra trivial supera o ensemble: o atalho que importa")
-print("esta na combinacao de campos, e nao numa coluna isolada. A Parte 2")
-print("sozinha nunca acusaria isso.")
+
+print(f"Parte 3 - regra trivial {acc_trivial:.1%} contra ensemble "
+      f"{acc_modelo:.1%}:")
+if trivial_supera:
+    print("   a regra trivial supera o ensemble. O atalho que importa esta")
+    print("   na combinacao de campos, e nao numa coluna isolada. A Parte 2")
+    print("   sozinha nunca acusaria isso.")
+else:
+    print("   a regra trivial NAO supera o ensemble. O modelo le algo que")
+    print("   a combinacao de dois campos nao reproduz.")
 print()
-print("Parte 4 - o AUC do texto cai ao nivel do acaso quando a area e o")
-print("tipo de dano saem dos campos textuais: confirma que o sinal lido")
-print("pelo modelo e a regra do gerador.")
+
+print(f"Parte 4 - AUC do texto embaralhado em {auc_tudo_embaralhado:.3f}, "
+      f"contra {auc_texto:.3f} sem embaralhar:")
+if falsificador_ok:
+    print("   o AUC cai ao nivel do acaso quando a area e o tipo de dano")
+    print("   saem dos campos textuais: confirma que o sinal lido pelo")
+    print("   modelo e a regra do gerador.")
+else:
+    print("   o AUC nao cai ao nivel do acaso. Resta sinal textual que nao")
+    print("   vem dos dois campos embaralhados, e a leitura da Parte 3")
+    print("   precisa ser revista.")
 print()
-print("Leitura conjunta: o experimento demonstra que o pipeline recupera")
-print("uma regra de severidade conhecida a partir de campos do schema do")
-print("Crashlytics. Isso e viabilidade tecnica do pipeline, e nao")
-print("evidencia de que mensagens reais de crash carreguem esse sinal.")
+
+print("Leitura conjunta:")
+if trivial_supera and falsificador_ok:
+    print("   o experimento demonstra que o pipeline recupera uma regra de")
+    print("   severidade conhecida a partir de campos do schema do")
+    print("   Crashlytics. Isso e viabilidade tecnica do pipeline, e nao")
+    print("   evidencia de que mensagens reais de crash carreguem esse")
+    print("   sinal.")
+else:
+    print("   as duas verificacoes nao se confirmaram juntas nesta")
+    print("   execucao. O diagnostico nao sustenta a leitura de que o")
+    print("   pipeline apenas recupera a regra do gerador; reveja as")
+    print("   Partes 3 e 4 antes de citar este resultado.")
 print("-" * 70)

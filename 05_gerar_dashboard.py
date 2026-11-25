@@ -140,7 +140,28 @@ f1_critico = medias["f1_critico"]
 concordancia = avaliacao.get("concordancia_rotulos_referencia", acuracia)
 
 criterios = avaliacao.get("criterios_tap", {})
-ic_conc = criterios.get("concordancia_ic95")
+complementares = avaliacao.get("metricas_complementares", {})
+
+auc_critico = criterios.get("auc_critico_obtido")
+situacao_critico = criterios.get("auc_critico_situacao", "")
+faixa_critico = criterios.get("auc_critico_faixa") or []
+if auc_critico is None:
+    texto_auc_critico = "—"
+    texto_situacao_critico = "nao disponivel neste resultado"
+else:
+    texto_auc_critico = f"{auc_critico:.3f}"
+    partes = [f"meta {criterios.get('auc_critico_meta', 0.80):.2f}"]
+    if situacao_critico:
+        partes.append(esc(situacao_critico))
+    if len(faixa_critico) == 2:
+        partes.append(
+            f"faixa {faixa_critico[0]:.3f}-{faixa_critico[1]:.3f}"
+        )
+    texto_situacao_critico = " · ".join(partes)
+
+# a chave migrou para metricas_complementares; o fallback le o formato antigo
+ic_conc = (complementares.get("concordancia_ic95")
+           or criterios.get("concordancia_ic95"))
 if ic_conc and len(ic_conc) == 2:
     texto_concordancia = (
         f"IC 95%: {ic_conc[0] * 100:.1f}% – {ic_conc[1] * 100:.1f}%"
@@ -306,7 +327,12 @@ html = f"""<!DOCTYPE html>
     <h3>Desempenho do Modelo</h3>
     <div class="metrics-row">
       <div class="metric-item">
-        <div class="label">AUC médio</div>
+        <div class="label">AUC da classe crítica </div>
+        <div class="value">{texto_auc_critico}</div>
+        <div class="faixa">{texto_situacao_critico}</div>
+      </div>
+      <div class="metric-item">
+        <div class="label">AUC macro (3 classes)</div>
         <div class="value">{auc:.3f}</div>
         <div class="faixa">{texto_faixa}</div>
       </div>

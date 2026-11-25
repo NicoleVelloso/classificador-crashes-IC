@@ -415,14 +415,13 @@ saida = {
         "auc_critico_faixa": [auc_crit_inferior,
                               ensemble["auc_critico"]["p97_5"]],
         "auc_critico_situacao": situacao_auc_critico,
-        "auc_meta": 0.80,
-        "auc_obtido": auc_medio,
-        "auc_atingido": bool(auc_medio >= 0.80),
-        "concordancia_meta": META_CONCORDANCIA,
+    },
+    "metricas_complementares": {
+        "auc_macro": auc_medio,
+        "concordancia_meta_de_referencia": META_CONCORDANCIA,
         "concordancia_obtida": concordancia,
         "concordancia_ic95": ic_concordancia,
         "concordancia_p_valor_contra_meta": p_valor_concordancia,
-        "concordancia_atingida": bool(concordancia >= META_CONCORDANCIA),
     },
 }
 

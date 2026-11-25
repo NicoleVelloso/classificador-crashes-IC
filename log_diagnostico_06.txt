@@ -1,0 +1,103 @@
+======================================================================
+DIAGNOSTICO - DE ONDE VEM O DESEMPENHO DO MODELO
+======================================================================
+
+----------------------------------------------------------------------
+PARTE 1 - FAIXA DE VALORES DE CADA COLUNA NUMERICA, POR CLASSE
+----------------------------------------------------------------------
+
+blame_frame_line:
+   CRÍTICO    min=      22  max=     479  mediana=     320
+   MÉDIO      min=      18  max=     475  mediana=     242
+   BAIXO      min=      17  max=     479  mediana=     220
+   -> as faixas se sobrepoem entre pelo menos duas classes
+
+occurrences_count:
+   CRÍTICO    min=       5  max=    3791  mediana=     242
+   MÉDIO      min=       6  max=    3128  mediana=     190
+   BAIXO      min=      15  max=    3095  mediana=     160
+   -> as faixas se sobrepoem entre pelo menos duas classes
+
+users_affected:
+   CRÍTICO    min=       5  max=    2100  mediana=     130
+   MÉDIO      min=       3  max=    1593  mediana=     106
+   BAIXO      min=       7  max=    1655  mediana=     102
+   -> as faixas se sobrepoem entre pelo menos duas classes
+
+----------------------------------------------------------------------
+PARTE 2 - DESEMPENHO POR GRUPO DE FEATURES
+----------------------------------------------------------------------
+(mesmo ensemble, mesmo protocolo: 5 folds x 10 repeticoes)
+
+Features usadas                          Acuracia              AUC   F1 crit.
+----------------------------------------------------------------------
+Tudo (referencia)                         68.9%          0.847       0.619
+So numericas                              37.7%          0.549       0.380
+So users_affected + ocorrencias           32.0%          0.490       0.188
+So texto (TF-IDF)                         78.5%          0.929       0.742
+So categoricas                            28.6%          0.473       0.245
+Tudo MENOS numericas                      69.1%          0.853       0.624
+
+----------------------------------------------------------------------
+PARTE 3 - LINHA DE BASE DE REGRA TRIVIAL
+----------------------------------------------------------------------
+(arvore de decisao sobre blame_frame_file + as 3 ultimas palavras
+ da mensagem; sem TF-IDF, sem SMOTE, sem ensemble)
+
+Regra trivial (arquivo + final da msg)     83.2%   AUC 0.864   F1 crit. 0.714
+   faixa observada da acuracia           [67.4% - 96.7%]
+Ensemble completo (referencia)             68.9%
+So texto, TF-IDF                           78.5%
+
+   ALERTA: regra trivial supera o modelo
+   Uma arvore sobre dois campos atinge 83.2%, contra 68.9% do ensemble.
+   O rotulo esta escrito nesses campos por construcao do
+   gerador. O desempenho do modelo nao pode ser lido como
+   capacidade de classificar severidade a partir da
+   descricao do crash: o que se mede e a recuperacao de uma
+   regra conhecida.
+
+----------------------------------------------------------------------
+PARTE 4 - FALSIFICADOR: EMBARALHAR OS CAMPOS QUE CARREGAM O SINAL
+----------------------------------------------------------------------
+(embaralhar entre as linhas o campo que carrega o sinal deve
+ derrubar o AUC do cenario 'so texto'; se os dois sinais da
+ regra sairem, o AUC deve chegar perto de 0,500)
+
+Nada embaralhado (referencia)      AUC  0.929   acuracia 78.5%
+Embaralhado: final da mensagem           AUC  0.870   acuracia 67.8%   (queda 0.059)
+Embaralhado: final da msg + arquivo + simbolo AUC  0.835   acuracia 66.1%   (queda 0.094)
+Embaralhado: msg inteira + tipo + arquivo + simbolo AUC  0.544   acuracia 34.8%   (queda 0.385)
+
+   Falsificador confirma. Retirando do texto os dois sinais da
+   regra do gerador — a area (nome do arquivo e simbolo) e o
+   tipo de dano (mensagem inteira e tipo da excecao) — o AUC
+   cai ao nivel do acaso. O que o modelo le no texto e a regra
+   do gerador, e nao uma relacao entre descricao e severidade.
+   Embaralhar so o final da mensagem nao basta: o dano esta
+   escrito em mais de um campo.
+
+----------------------------------------------------------------------
+COMO LER
+----------------------------------------------------------------------
+Parte 2 - impacto isolado em AUC 0.490:
+   as colunas de impacto nao funcionam como atalho. Era o
+   vazamento da primeira versao do dataset, e esta corrigido.
+
+Parte 3 - regra trivial 83.2% contra ensemble 68.9%:
+   a regra trivial supera o ensemble. O atalho que importa esta
+   na combinacao de campos, e nao numa coluna isolada. A Parte 2
+   sozinha nunca acusaria isso.
+
+Parte 4 - AUC do texto embaralhado em 0.544, contra 0.929 sem embaralhar:
+   o AUC cai ao nivel do acaso quando a area e o tipo de dano
+   saem dos campos textuais: confirma que o sinal lido pelo
+   modelo e a regra do gerador.
+
+Leitura conjunta:
+   o experimento demonstra que o pipeline recupera uma regra de
+   severidade conhecida a partir de campos do schema do
+   Crashlytics. Isso e viabilidade tecnica do pipeline, e nao
+   evidencia de que mensagens reais de crash carreguem esse
+   sinal.
+----------------------------------------------------------------------

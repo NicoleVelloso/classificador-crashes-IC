@@ -1,0 +1,86 @@
+======================================================================
+AVALIACAO DO MODELO - VALIDACAO CRUZADA REPETIDA
+======================================================================
+
+Dataset: 150 crashes rotulados
+Distribuicao das classes:
+   CRÍTICO     36 crashes (24%)
+   MÉDIO       54 crashes (36%)
+   BAIXO       60 crashes (40%)
+
+Features: variam por fold (TF-IDF ajustado dentro de cada um).
+
+======================================================================
+EXECUTANDO 5 FOLDS x 10 REPETICOES = 50 AVALIACOES POR MODELO
+======================================================================
+(pode levar alguns minutos)
+
+   Avaliando: Classe majoritaria (baseline) ...
+   Avaliando: SVM isolado ...
+   Avaliando: Naive Bayes isolado ...
+   Avaliando: Regressao Logistica isolada ...
+   Avaliando: Ensemble sem SMOTE ...
+   Avaliando: Ensemble soft voting ...
+
+======================================================================
+COMPARACAO ENTRE MODELOS
+======================================================================
+Modelo                                     Acuracia                AUC
+----------------------------------------------------------------------
+Classe majoritaria (baseline)      40.0% +/- 0.0     0.500 +/- 0.000
+SVM isolado                        57.7% +/- 8.3     0.770 +/- 0.060
+Naive Bayes isolado                70.5% +/- 6.9     0.870 +/- 0.049
+Regressao Logistica isolada        68.9% +/- 8.5     0.846 +/- 0.057
+Ensemble sem SMOTE                 69.0% +/- 6.4     0.853 +/- 0.052
+Ensemble soft voting               68.9% +/- 7.3     0.847 +/- 0.054
+
+F1-score da classe CRITICA e faixa observada (percentis 2,5-97,5):
+----------------------------------------------------------------------
+Classe majoritaria (baseline)    F1 = 0.000 [0.000 - 0.000]
+SVM isolado                      F1 = 0.475 [0.032 - 0.742]
+Naive Bayes isolado              F1 = 0.671 [0.528 - 0.858]
+Regressao Logistica isolada      F1 = 0.606 [0.296 - 0.875]
+Ensemble sem SMOTE               F1 = 0.590 [0.237 - 0.833]
+Ensemble soft voting             F1 = 0.619 [0.313 - 0.863]
+
+Faixa observada de AUC (percentis 2,5-97,5 das 50 avaliacoes):
+----------------------------------------------------------------------
+Classe majoritaria (baseline)    AUC = 0.500 [0.500 - 0.500]
+SVM isolado                      AUC = 0.770 [0.640 - 0.877]
+Naive Bayes isolado              AUC = 0.870 [0.764 - 0.942]
+Regressao Logistica isolada      AUC = 0.846 [0.705 - 0.921]
+Ensemble sem SMOTE               AUC = 0.853 [0.733 - 0.932]
+Ensemble soft voting             AUC = 0.847 [0.712 - 0.925]
+
+======================================================================
+MATRIZ DE CONFUSAO DO ENSEMBLE (uma passagem de 5 folds)
+======================================================================
+               Prev: CRÍTICO  Prev: MÉDIO  Prev: BAIXO
+Real: CRÍTICO             24           12            0
+Real: MÉDIO               13           37            4
+Real: BAIXO                2           12           46
+
+Concordancia com os rotulos de referencia: 107/150 = 71.3%
+   IC 95% (Wilson): [63.6% - 78.0%]
+   Teste binomial contra a meta de 75%: p = 0.172
+   p > 0,05: diferenca nao distinguivel do acaso amostral.
+Medida contra rotulos de referencia da autora, nao contra triagem independente.
+
+======================================================================
+CRITERIO DE SUCESSO DO TAP
+======================================================================
+   ~~  AUC > 0,80 na classe CRITICA ... obtido: 0.867
+        faixa observada: [0.718 - 0.975]
+        situacao: ATINGIDO NA MEDIA
+        a media supera 0,80, mas o limite inferior da faixa
+        (0.718) fica abaixo: em parte das
+        divisoes o criterio nao seria atingido (n=150).
+
+----------------------------------------------------------------------
+METRICAS COMPLEMENTARES (nao sao criterios do TAP)
+----------------------------------------------------------------------
+   AUC macro um-contra-o-resto .... 0.847  [0.712 - 0.925]
+   Concordancia com os rotulos .... 71.3%
+        IC 95%: [63.6% - 78.0%]
+        comparada a meta de referencia de 75% adotada na analise
+
